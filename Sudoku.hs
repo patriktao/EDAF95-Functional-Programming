@@ -5,6 +5,7 @@ module Sudoku where
 
 import Data.Char (digitToInt)
 import Data.List
+import Data.Sequence (chunksOf)
 import System.Random
 
 rows = "ABCD"
@@ -117,9 +118,9 @@ validSquare (s, i) board = notElem i $ lookups (getPeers s) board
 -- task 2
 validBoard :: Board -> Bool
 -- validBoard board = False `notElem` map (`validSquare` board) board
+validBoard board = notElem False (map (\sqr -> validSquare sqr board) board)
 
--- validBoard board = notElem False (map (\sqr -> validSquare sqr board) board)
-validBoard board = all (`validSquare` board) board
+-- validBoard board = all (`validSquare` board) board
 
 {-
 TIPS----
@@ -132,11 +133,11 @@ point-free se till att en annan funktion hanterar parametrarna
 -- task 3
 -- verifySudoku :: Sudoku -> Bool
 -- verifySudoku str = validBoard $ parseBoard str
+
 -- verifySudoku = validBoard . parseBoard
 
 -- Part 4
 -- task 1
-
 reduceList :: Eq a => [a] -> [a] -> [a]
 -- reduceList list_a [] = list_a
 -- reduceList list_a (b:list_b)= reduceList (filter (/= b) list_a) list_b
@@ -144,6 +145,8 @@ reduceList = foldl (\list_a b -> filter (/= b) list_a)
 
 -- part 4, task 2
 --   | elem i possiblePairs = (s, [])
+-- returnerar sig själv om den är valid
+-- returnerar tom lista så är den fel
 validSquareNumbers :: (String, Int) -> [(String, Int)] -> (String, [Int])
 validSquareNumbers (s, i) list
   | i `elem` possiblePairs = (s, [])
@@ -180,7 +183,7 @@ verifySudoku string = validUnits $ parseBoard string
 
 -- verifySudoku = validBoard . parseBoard
 
--- Lab 3
+-- Lab 3 föreberedelser
 -- task 1
 -- Reads two integer values from input, and prints a random number in between those values
 -- show :: Show a => a -> String
@@ -202,8 +205,9 @@ giveMeANumber = do
 -- task 3
 -- show :: Show a => a -> String
 -- mapM_ används för att loopa igenom en array som utsätts för monadic actions
-printSudoku :: [(String, Int)] -> IO ()
-printSudoku cells = do
+-- intercalate unfolds an array
+printSudoku1 :: [(String, Int)] -> IO ()
+printSudoku1 cells = do
   mapM_ printRow rows
   where
     printRow row =
@@ -211,16 +215,20 @@ printSudoku cells = do
         let rowCells = map snd $ filter (\(name, _) -> head name == row) (sort cells)
         putStrLn $ " " ++ intercalate "  " (map show rowCells) ++ " "
 
--- traverse through cells and find the tuple, where the first element equals square
--- print the second element of the tuple
+-- Lab 3
+-- task 1
+-- indicate in sudoku where there is error
+chunks :: Int -> [a] -> [[a]]
+chunks _ [] = []
+chunks n xs =
+  let (ys, zs) = splitAt n xs
+   in ys : chunks n zs
 
--- if val == 0
---  then putStrLn " "
---  else putStrLn $ show val
-
--- [("A4", 1), ("B3", 0)]
-
--- A1 A2 A3 A4
--- B1 B2 B3 B4
--- C1 C2 C3 C4
--- D1 D2 D3 D4
+printSudoku :: [(String, Int)] -> IO ()
+printSudoku cells = mapM_ print rows'
+  where
+    showSq :: (String, Int) -> String
+    showSq sq@(string, val) = if validSquare sq cells then show val else "x"
+    showRows = map showSq cells
+    chunkSize = round $ sqrt $ fromIntegral $ length cells
+    rows' = chunks chunkSize showRows
