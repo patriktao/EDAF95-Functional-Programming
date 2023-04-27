@@ -5,6 +5,7 @@ module Sudoku where
 
 import Data.Char (digitToInt)
 import Data.List
+import Data.List.Split
 import Data.Sequence (chunksOf)
 import System.Random
 
@@ -15,6 +16,13 @@ cols = "1234"
 type Board = [(String, Int)]
 
 type Sudoku = String
+
+-- makes chunks of an array of specified length
+chunks :: Int -> [a] -> [[a]]
+chunks _ [] = []
+chunks n xs =
+  let (ys, zs) = splitAt n xs
+   in ys : chunks n zs
 
 -- checks if list contains an element
 containsElem :: Eq a => a -> [a] -> Bool
@@ -38,6 +46,7 @@ squares = cross rows cols
 
 -- task 3
 -- Write a function parseBoard which takes a board string as input and returns a list of tuples representing the board as mentioned above.
+-- zip creates a list of tuples, with elements of first array mapped to the elements of second array
 parseBoard :: String -> Board
 parseBoard = zip squares . map digitToInt . replacePointsWithZeros
 
@@ -45,18 +54,14 @@ parseBoard = zip squares . map digitToInt . replacePointsWithZeros
 
 -- task 1, calculate a value unitList of all possible units (rows, cols, boxes)
 unitList :: [[String]]
-unitList = boxes ++ rows' ++ cols'
+unitList = rows' ++ cols' ++ boxes rows'
   where
-    boxes = [cross xs ys | xs <- ["AB", "CD"], ys <- ["12", "34"]]
-    rows' = [cross xs ys | xs <- ["A", "B", "C", "D"], ys <- ["1234"]]
-    cols' = [cross xs ys | xs <- ["ABCD"], ys <- ["1", "2", "3", "4"]]
-
--- unitList = rows' ++ transpose rows' ++ boxes rows'
---   where
---      len = (round . sqrt. fromIntegral . length) rows
---      rows' = chunksOf len cells
---      boxes = chunksOf len . concat . concat . halves
---      halves = transpose . map (chunkOf lem)
+    rowLength = length rows
+    len = (round . sqrt . fromIntegral) rowLength
+    rows' = chunks rowLength squares -- ABCD och 1234 -> [A1 A2 A3 A4] osv...
+    cols' = transpose rows' -- Transposing rows' turn into -> [A1 B1 C1 D1] osv...
+    halves = transpose . map (chunks len) -- [A1 A2] [B1 B2]|| help function for boxes: .map (chunks len ) applies chunks len to each inner array of the input array
+    boxes = chunks rowLength . concat . concat . halves -- [A1 A2 B1 B2] || We send in rows' into this function (it's abstractified due to point-free solution)
 
 -- task 2
 filterUnitList :: String -> [[String]]
@@ -117,10 +122,10 @@ validSquare (s, i) board = notElem i $ lookups (getPeers s) board
 
 -- task 2
 validBoard :: Board -> Bool
--- validBoard board = False `notElem` map (`validSquare` board) board
-validBoard board = notElem False (map (\sqr -> validSquare sqr board) board)
+validBoard board = all (`validSquare` board) board
 
--- validBoard board = all (`validSquare` board) board
+-- validBoard board = False `notElem` map (`validSquare` board) board
+-- validBoard board = all (\sqr -> validSquare sqr board) board
 
 {-
 TIPS----
@@ -130,47 +135,46 @@ point-free se till att en annan funktion hanterar parametrarna
 \c -> definerar en arrow funktion, därefter kan man göra en (\c -> validSquare c xs) för att specifera exakt vad som ska göras i funktionen.
 -}
 
--- task 3
+-- task 3 (nerflyttad)
 -- verifySudoku :: Sudoku -> Bool
 -- verifySudoku str = validBoard $ parseBoard str
-
 -- verifySudoku = validBoard . parseBoard
 
 -- Part 4
 -- task 1
 reduceList :: Eq a => [a] -> [a] -> [a]
--- reduceList list_a [] = list_a
--- reduceList list_a (b:list_b)= reduceList (filter (/= b) list_a) list_b
 reduceList = foldl (\list_a b -> filter (/= b) list_a)
 
+-- reduceList list_a [] = list_a
+-- reduceList list_a (b:list_b)= reduceList (filter (/= b) list_a) list_b
+
 -- part 4, task 2
---   | elem i possiblePairs = (s, [])
--- returnerar sig själv om den är valid
--- returnerar tom lista så är den fel
 validSquareNumbers :: (String, Int) -> [(String, Int)] -> (String, [Int])
 validSquareNumbers (s, i) list
+  -- \| elem i possiblePairs = (s, [])
   | i `elem` possiblePairs = (s, [])
   | i /= 0 = (s, [i])
   | otherwise = (s, reduceList inf possiblePairs)
   where
     possiblePairs = filter (/= 0) $ lookups (getPeers s) list
-    inf = [1, 2, 3, 4]
+    inf = [1 .. length rows]
+
+-- returnerar sig själv om den är valid
+-- returnerar tom lista så är den fel
 
 -- part 4, task 3
 validBoardNumbers :: Board -> [(String, [Int])]
-validBoardNumbers board = map (\sqr -> validSquareNumbers sqr board) board
+validBoardNumbers board = map (`validSquareNumbers` board) board
 
--- validBoardNumbers board = map (`validSquareNumbers` board) board
+-- validBoardNumbers board = map (\sqr -> validSquareNumbers sqr board) board
 
 -- part 4, task 4
-
 -- checka för att se om en unit är valid
-nums :: [Int]
-nums = [1, 2, 3, 4]
-
 validUnit :: [String] -> [(String, [Int])] -> Bool
 validUnit [] board = False
 validUnit unit board = all (\n -> elem n $ concat (lookups unit board)) nums
+  where
+    nums = [1 .. length rows]
 
 -- validUnit list board = concat `notElem` lookups (getPeers list) board
 -- validUnit unit board = and (map (\n -> elem n $ concat (lookups unit board)) nums)
@@ -178,7 +182,7 @@ validUnit unit board = all (\n -> elem n $ concat (lookups unit board)) nums
 validUnits :: Board -> Bool
 validUnits board = all (\n -> validUnit n $ validBoardNumbers board) unitList
 
-verifySudoku :: Sudoku -> Bool
+verifySudoku :: String -> Bool
 verifySudoku string = validUnits $ parseBoard string
 
 -- verifySudoku = validBoard . parseBoard
@@ -218,17 +222,25 @@ printSudoku1 cells = do
 -- Lab 3
 -- task 1
 -- indicate in sudoku where there is error
-chunks :: Int -> [a] -> [[a]]
-chunks _ [] = []
-chunks n xs =
-  let (ys, zs) = splitAt n xs
-   in ys : chunks n zs
-
 printSudoku :: [(String, Int)] -> IO ()
 printSudoku cells = mapM_ print rows'
   where
     showSq :: (String, Int) -> String
     showSq sq@(string, val) = if validSquare sq cells then show val else "x"
     showRows = map showSq cells
-    chunkSize = round $ sqrt $ fromIntegral $ length cells
+    chunkSize = (round . sqrt . fromIntegral . length) cells
+    -- chunkSize = round $ sqrt $ fromIntegral $ length cells
     rows' = chunks chunkSize showRows
+
+main :: IO ()
+main =
+  do
+    s <- readFile "easy50.txt"
+    let numbers = splitOn "========" $ concat $ lines s
+    mapM_ checkSudoku numbers
+      where
+        checkSudoku b = 
+          do
+            print $ verifySudoku b
+            printSudoku $ parseBoard b
+            putStrLn " "
