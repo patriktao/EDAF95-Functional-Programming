@@ -9,9 +9,8 @@ import Data.List.Split
 import Data.Sequence (chunksOf)
 import System.Random
 
-rows = "ABCD"
-
-cols = "1234"
+rows = "ABCDEFGHI"
+cols = "123456789"
 
 type Board = [(String, Int)]
 
