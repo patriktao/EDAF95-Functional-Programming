@@ -9,7 +9,10 @@ import Data.List.Split
 import Data.Sequence (chunksOf)
 import System.Random
 
+rows :: String
 rows = "ABCDEFGHI"
+
+cols :: String
 cols = "123456789"
 
 type Board = [(String, Int)]
@@ -231,15 +234,22 @@ printSudoku cells = mapM_ print rows'
     -- chunkSize = round $ sqrt $ fromIntegral $ length cells
     rows' = chunks chunkSize showRows
 
+{- splitOn :: String -> String -> [String]
+splitOn delim "" = []
+splitOn delim s =
+  let word = takeWhile (/= delim) $ dropWhile (== delim) s
+      (_, rest) = splitAt (length word) s
+   in word : splitOn (dropWhile (== delim) rest) -}
+
 main :: IO ()
 main =
   do
     s <- readFile "easy50.txt"
     let numbers = splitOn "========" $ concat $ lines s
     mapM_ checkSudoku numbers
-      where
-        checkSudoku b = 
-          do
-            print $ verifySudoku b
-            printSudoku $ parseBoard b
-            putStrLn " "
+  where
+    checkSudoku b =
+      do
+        print $ verifySudoku b
+        printSudoku $ parseBoard b
+        putStrLn " "
