@@ -1,5 +1,13 @@
--- Patrik Tao pa0676ta-s
--- Andreas Ruggieri an1775ru-s
+{-
+Patrik Tao pa0676ta-s
+Andreas Ruggieri an1775ru-s
+
+Write these commands:
+1. stack ghci
+2. :load Assignment1.hs
+3. main
+4. write the name of the test file. e.g., easy50.txt
+ -}
 
 module Sudoku where
 
@@ -60,7 +68,6 @@ validSquare (s, i) board rows = notElem i $ lookups (getPeers s rows) board
 
 validBoard :: Board -> String -> Bool
 validBoard board rows = all (\sqr -> validSquare sqr board rows) board
-
 
 sudokuSize :: [(String, Int)] -> Int
 sudokuSize = round . sqrt . fromIntegral . length
