@@ -9,12 +9,6 @@ type Board = [(String, Int)]
 
 type Sudoku = String
 
-containsElem :: Eq a => a -> [a] -> Bool
-containsElem _ [] = False
-containsElem elem (x : xs)
-  | elem == x = True
-  | otherwise = containsElem elem xs
-
 cross :: [a] -> [a] -> [[a]]
 cross xs ys = [[x, y] | x <- xs, y <- ys]
 
@@ -31,7 +25,7 @@ unitList rowString = rows' ++ cols' ++ boxes rows'
     boxes rows = chunks (length rowString) $ concat $ concat $ halves rows -- [A1 A2 B1 B2]
 
 filterUnitList :: String -> String -> [[String]]
-filterUnitList square rows = filter (containsElem square) $ unitList rows
+filterUnitList square rows = filter (elem square) $ unitList rows
 
 units :: String -> [(String, [[String]])]
 units rows = [(square, filterUnitList square rows) | square <- squares rows]
@@ -60,7 +54,6 @@ justifyList xs = [x | Just x <- xs]
 lookups :: Eq a => [a] -> [(a, b)] -> [b]
 lookups input_list list = justifyList [lookup x list | x <- input_list]
 
-{- Valid Square -}
 validSquare :: (String, Int) -> Board -> String -> Bool
 validSquare (v, 0) list rows = True
 validSquare (s, i) board rows = notElem i $ lookups (getPeers s rows) board
@@ -68,8 +61,6 @@ validSquare (s, i) board rows = notElem i $ lookups (getPeers s rows) board
 validBoard :: Board -> String -> Bool
 validBoard board rows = all (\sqr -> validSquare sqr board rows) board
 
-verifySudoku :: String -> String -> Bool
-verifySudoku board rows = validBoard (parseBoard board rows) rows
 
 sudokuSize :: [(String, Int)] -> Int
 sudokuSize = round . sqrt . fromIntegral . length
@@ -89,6 +80,10 @@ printSudoku cells rowString = mapM_ print rows'
 parseBoard :: String -> String -> Board
 parseBoard board rows = zip (squares rows) (map charToInt board)
 
+verifySudoku :: String -> String -> Bool
+verifySudoku board rows = validBoard (parseBoard board rows) rows
+
+{- Self Implemented Functions -}
 charToInt :: Char -> Int
 charToInt c = fromEnum c - fromEnum '0'
 
@@ -108,6 +103,7 @@ splitOn delimiter list = splitOn' delimiter list []
       | take (length delimiter) (x : xs) == delimiter = acc : splitOn' delimiter (drop (length delimiter) (x : xs)) []
       | otherwise = splitOn' delimiter xs (acc ++ [x])
 
+{- Main Functions -}
 main :: IO ()
 main = do
   putStr "Solve Sudoku, enter filename: "
