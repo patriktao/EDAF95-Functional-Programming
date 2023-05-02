@@ -4,6 +4,7 @@
 module Sudoku where
 
 import Data.List
+import Data.List.Split
 
 type Board = [(String, Int)]
 
@@ -99,19 +100,12 @@ chunks n xs =
   let (ys, zs) = splitAt n xs
    in ys : chunks n zs
 
-splitOn :: String -> String -> [String]
-splitOn _ "" = []
-splitOn delimiter str =
-  let (start, rest) = break (== delimiter) str
-      (_, remain) = span (== delimiter) rest
-   in start : splitOn delimiter remain
-
 main :: IO ()
 main = do
   putStrLn "Solve Sudoku, enter filename"
-  input <- getLine
-  s <- readFile input
-  let numbers = splitOn "========" $ concat $ lines s
+  i <- getLine
+  s <- readFile i
+  let numbers = filter (/= "") $ splitOn "=" $ concat $ lines s
   mapM_ checkSudoku numbers
   where
     checkSudoku board = do
