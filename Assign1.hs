@@ -4,7 +4,6 @@
 module Sudoku where
 
 import Data.List
-import Data.List.Split
 
 type Board = [(String, Int)]
 
@@ -16,8 +15,8 @@ containsElem elem (x : xs)
   | elem == x = True
   | otherwise = containsElem elem xs
 
-cross :: [a] -> [a] -> [[a]] -- declare input output
-cross xs ys = [[x, y] | x <- xs, y <- ys] -- expected behaviour
+cross :: [a] -> [a] -> [[a]]
+cross xs ys = [[x, y] | x <- xs, y <- ys]
 
 squares :: String -> [String]
 squares rows = cross rows $ take (length rows) ['1' ..]
@@ -25,12 +24,11 @@ squares rows = cross rows $ take (length rows) ['1' ..]
 unitList :: String -> [[String]]
 unitList rowString = rows' ++ cols' ++ boxes rows'
   where
-    rowLength = length rowString
-    len = (round . sqrt . fromIntegral) rowLength
-    rows' = chunks rowLength $ squares rowString -- ABCD och 1234 -> [A1 A2 A3 A4] osv...
+    len = (round . sqrt . fromIntegral) (length rowString)
+    rows' = chunks (length rowString) $ squares rowString -- ABCD och 1234 -> [A1 A2 A3 A4] osv...
     cols' = transpose rows' -- Transposing rows' turn into -> [A1 B1 C1 D1] osv...
     halves = transpose . map (chunks len) -- [A1 A2] [B1 B2]|| help function for boxes: .map (chunks len ) applies chunks len to each inner array of the input array
-    boxes rows = chunks rowLength $ concat $ concat $ halves rows -- [A1 A2 B1 B2]
+    boxes rows = chunks (length rowString) $ concat $ concat $ halves rows -- [A1 A2 B1 B2]
 
 filterUnitList :: String -> String -> [[String]]
 filterUnitList square rows = filter (containsElem square) $ unitList rows
@@ -100,9 +98,19 @@ chunks n xs =
   let (ys, zs) = splitAt n xs
    in ys : chunks n zs
 
+splitOn :: Eq a => [a] -> [a] -> [[a]]
+splitOn _ [] = []
+splitOn delimiter list = splitOn' delimiter list []
+  where
+    splitOn' :: Eq a => [a] -> [a] -> [a] -> [[a]]
+    splitOn' _ [] acc = [acc]
+    splitOn' delimiter (x : xs) acc
+      | take (length delimiter) (x : xs) == delimiter = acc : splitOn' delimiter (drop (length delimiter) (x : xs)) []
+      | otherwise = splitOn' delimiter xs (acc ++ [x])
+
 main :: IO ()
 main = do
-  putStrLn "Solve Sudoku, enter filename"
+  putStr "Solve Sudoku, enter filename: "
   i <- getLine
   s <- readFile i
   let numbers = filter (/= "") $ splitOn "=" $ concat $ lines s
