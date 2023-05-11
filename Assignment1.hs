@@ -66,8 +66,36 @@ validSquare :: (String, Int) -> Board -> String -> Bool
 validSquare (v, 0) list rows = True
 validSquare (s, i) board rows = notElem i $ lookups (getPeers s rows) board
 
+-- FEL, använd validUnit
+-- få ut alla units tillhörande squaren
+-- evaluera ifall är oblockerande
 validBoard :: Board -> String -> Bool
-validBoard board rows = all (\sqr -> validSquare sqr board rows) board
+validBoard board rows = all (\tuple -> validSquare tuple board rows) board
+
+validUnit :: String -> [String] -> [(String, [Int])] -> Bool
+validUnit _ [] board = False
+validUnit rows unit board = all (\n -> elem n $ concat (lookups unit board)) nums
+  where
+    nums = [1 .. length rows]
+
+reduceList :: Eq a => [a] -> [a] -> [a]
+reduceList = foldl (\list_a b -> filter (/= b) list_a)
+
+validSquareNumbers :: String -> (String, Int) -> [(String, Int)] -> (String, [Int])
+validSquareNumbers rows (s, i) list
+  -- \| elem i possiblePairs = (s, [])
+  | i `elem` possiblePairs = (s, [])
+  | i /= 0 = (s, [i])
+  | otherwise = (s, reduceList inf possiblePairs)
+  where
+    possiblePairs = filter (/= 0) $ lookups (getPeers s rows) list
+    inf = [1 .. length rows]
+
+validBoardNumbers :: String -> Board -> [(String, [Int])]
+validBoardNumbers rows board = map (\tuple -> validSquareNumbers rows tuple board) board
+
+validUnits :: String -> Board -> Bool
+validUnits rows board = all (\unit -> validUnit rows unit $ validBoardNumbers rows board) (unitList rows)
 
 sudokuSize :: [(String, Int)] -> Int
 sudokuSize = round . sqrt . fromIntegral . length
@@ -88,7 +116,7 @@ parseBoard :: String -> String -> Board
 parseBoard board rows = zip (squares rows) (map charToInt board)
 
 verifySudoku :: String -> String -> Bool
-verifySudoku board rows = validBoard (parseBoard board rows) rows
+verifySudoku board rows = validUnits rows $ parseBoard board rows
 
 {- Self Implemented Functions -}
 charToInt :: Char -> Int
