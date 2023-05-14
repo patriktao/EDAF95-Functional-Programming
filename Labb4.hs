@@ -158,3 +158,12 @@ getPeers :: String -> [String]
 getPeers sqr = case filter (\(s, _) -> s == sqr) peers of
   [(_, ys)] -> ys
   _ -> []
+
+solveSudoku' :: [String] -> Board -> Maybe Board
+solveSudoku' [] board = Just board
+solveSudoku' (sqr : squares) board = firstJust $ map (\val -> assign val sqr board >>= solveSudoku' squares) possibleValues
+  where
+    possibleValues = lookupList sqr board
+
+solveSudoku :: String -> Maybe Board
+solveSudoku board = parseBoard board >>= solveSudoku' squares
