@@ -1,4 +1,4 @@
-module Labb 3 where
+module Labb3 where
 
 import Data.List
 
