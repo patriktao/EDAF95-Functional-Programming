@@ -1,4 +1,7 @@
-module SolveSudoku where
+-- Patrik Tao
+-- Andreas Ruggieri
+
+module Labb4 where
 
 -- by Adrian Roth
 
@@ -94,8 +97,6 @@ rows1 = [("A1", 0), ("A2", 0), ("A3", 0), ("A4", 0), ("A5", 0), ("A6", 0), ("A7"
 maybeBind :: Maybe a -> (a -> Maybe b) -> Maybe b
 maybeBind Nothing _ = Nothing
 maybeBind (Just a) f = f a
-
-{- >>= -}
 
 {- This takes two values and a list of elements and possibly returns a list where the first occurnce of the element has been replaced. What it does is that it checks whether we can replace an element and whether
  -}
