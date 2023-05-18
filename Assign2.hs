@@ -1,3 +1,6 @@
+-- Patrik Tao
+-- Andreas Ruggieri
+
 module SolveSudoku where
 
 -- by Adrian Roth
@@ -63,9 +66,9 @@ map2 (f, g) (x, y) = (f x, g y)
 -- tar in två funktioner och en lista. Den första funktionen utförs på ett element om den andra funktionen ger värdet true
 -- när den utförs på ett element
 mapIf :: (a -> a) -> (a -> Bool) -> [a] -> [a]
-mapIf f p xs = [if p x then f x else x | x <- xs]
+mapIf f p = map (\x -> if p x then f x else x)
 
--- mapIf f p xs = map (\x -> if p x then f x else x) xs
+-- mapIf f p xs = [if p x then f x else x | x <- xs]
 
 {- Returns just if one of the values are Just -}
 maybeOr :: Maybe a -> Maybe a -> Maybe a
@@ -84,9 +87,6 @@ lookupList _ [] = []
 lookupList key ((k, values) : rest)
   | key == k = values
   | otherwise = lookupList key rest
-
-rows1 :: [(String, Integer)]
-rows1 = [("A1", 0), ("A2", 0), ("A3", 0), ("A4", 0), ("A5", 0), ("A6", 0), ("A7", 0), ("A8", 0), ("A9", 0), ("B1", 0), ("B2", 0), ("B3", 0), ("B4", 0), ("B5", 0), ("B6", 0), ("B7", 0), ("B8", 0), ("B9", 0), ("C1", 0), ("C2", 0), ("C3", 0), ("C4", 0), ("C5", 0), ("C6", 0), ("C7", 0), ("C8", 0), ("C9", 0), ("D1", 0), ("D2", 0), ("D3", 0), ("D4", 0), ("D5", 0), ("D6", 0), ("D7", 0), ("D8", 0), ("D9", 0), ("E1", 0), ("E2", 0), ("E3", 0), ("E4", 0), ("E5", 0), ("E6", 0), ("E7", 0), ("E8", 0), ("E9", 0), ("F1", 0), ("F2", 0), ("F3", 0), ("F4", 0), ("F5", 0), ("F6", 0), ("F7", 0), ("F8", 0), ("F9", 0), ("G1", 0), ("G2", 0), ("G3", 0), ("G4", 0), ("G5", 0), ("G6", 0), ("G7", 0), ("G8", 0), ("G9", 0), ("H1", 0), ("H2", 0), ("H3", 0), ("H4", 0), ("H5", 0), ("H6", 0), ("H7", 0), ("H8", 0), ("H9", 0), ("I1", 0), ("I2", 0), ("I3", 0), ("I4", 0), ("I5", 0), ("I6", 0), ("I7", 0), ("I8", 0), ("I9", 0)]
 
 maybeBind :: Maybe a -> (a -> Maybe b) -> Maybe b
 maybeBind Nothing _ = Nothing
@@ -175,7 +175,9 @@ printSudoku cells = do
   mapM_ print rows'
   where
     showSq :: (String, Int) -> String
-    showSq sq@(string, val) = if validSquare sq cells then show val else "x"
+    showSq sq@(string, val)
+      | validSquare (string, val) cells = if val == 0 then "_" else show val
+      | otherwise = "error"
     showRows = map showSq cells
     chunkSize = (round . sqrt . fromIntegral . length) cells
     rows' = chunks chunkSize showRows
@@ -204,15 +206,17 @@ main = do
   i <- getLine
   s <- readFile i
   let boards = filter (/= "") $ splitOn "=" $ concat $ lines s
+  let currBoard = head boards
   putStr "\n"
   putStrLn "Here is the first sudoku read from the file:"
-  chooseAlternative boards
+  chooseAlternative boards currBoard
 
-chooseAlternative :: [String] -> IO ()
-chooseAlternative boards = do
+chooseAlternative :: [String] -> String -> IO ()
+chooseAlternative boards currBoard = do
   putStr "\n"
-  putStrLn "Board:"
-  printSudoku (parseBoardToPrint (head boards))
+  putStrLn "-----------------------------------------------"
+  putStrLn "Current Board:"
+  printSudoku (parseBoardToPrint currBoard)
   putStr "\n"
   putStrLn "Choose one of the alternatives"
   putStrLn "1. Solve the current sudoku and show the result"
@@ -222,16 +226,19 @@ chooseAlternative boards = do
   putStr "\n"
   putStr "What do you want to do?: "
   input <- getLine
-  putStr "\n"
-  let choice = read input :: Int
-  case choice of
-    1 -> solveCurrentSudoku (head boards) -- solveSudoku -- call with the string
-    2 -> solveAllSudokus boards -- solve all sudokus
-    3 -> assignNumber (parseBoard $ head boards) -- assign
-    4 -> do
-      putStrLn "Bye bye!"
-      exitSuccess
-  chooseAlternative boards
+  if input >= show 1 && input <= show 4
+    then do
+      let choice = read input :: Int
+      case choice of
+        1 -> solveCurrentSudoku boards currBoard -- solveSudoku -- call with the string
+        2 -> solveAllSudokus boards -- solve all sudokus
+        3 -> assignNumber boards currBoard -- assign
+        4 -> do
+          putStrLn "Bye bye!"
+          exitSuccess
+    else do
+      putStr "Not a valid input, type a number between (1-4)"
+      chooseAlternative boards currBoard
 
 solveAllSudokus :: [String] -> IO ()
 solveAllSudokus boards = do
@@ -239,53 +246,59 @@ solveAllSudokus boards = do
   where
     checkSudoku board = do
       putStr "\n"
-      solveCurrentSudoku board
+      (printSudoku . formatPrettyMaybeBoard . solveSudoku) board
 
-solveCurrentSudoku :: String -> IO ()
-solveCurrentSudoku board = do
-  printSudoku (formatPrettyBoard $ solveSudoku board)
+solveCurrentSudoku :: [String] -> String -> IO ()
+solveCurrentSudoku boards currBoard = do
+  let solvedBoard = (stringArrayToString . formatPrettyMaybeBoard . solveSudoku) currBoard
+  chooseAlternative boards solvedBoard
 
-formatPrettyBoard :: Maybe Board -> [(String, Int)]
-formatPrettyBoard board = case board of
-  Just board -> map (\(sq, intArray) -> (sq, head intArray)) board
+formatPrettyMaybeBoard :: Maybe Board -> [(String, Int)]
+formatPrettyMaybeBoard board = case board of
+  Just board -> map (\(id, intArray) -> if length intArray == 1 then (id, head intArray) else (id, 0)) board
+  {- Problemet med denna lösning är när vi tilldelar en value till en viss square med funktionen assign, kommer detta värde att rekursivt elimineras från alla peers till denna square
+    vilket medför att de peers som bara har 1 element kvar efter eliminationen visas upp i boarden  -}
   Nothing -> []
 
-assignNumber :: Maybe Board -> IO ()
-assignNumber board = do
+assignNumber :: [String] -> String -> IO ()
+assignNumber boards currBoard = do
   putStr "Choose a square that you want to assign a value to: "
   sqr <- getLine
   if sqr `notElem` squares
     then do
       putStrLn "Not a valid square"
-      putStrLn "\n"
-      assignNumber board
-    else askForNumber board sqr
+      assignNumber boards currBoard
+    else askForNumber boards currBoard sqr
 
--- frågar om nummer från användaren
-askForNumber :: Maybe Board -> String -> IO ()
-askForNumber board sqr = do
-  putStrLn "\n"
+stringArrayToString :: [(String, Int)] -> String
+stringArrayToString = concatMap (show . snd)
+
+askForNumber :: [String] -> String -> String -> IO ()
+askForNumber boards currBoard sqr = do
   putStr "Enter a number to put into the square: "
   input <- getLine
   case readMaybe input of
     Just number ->
       if number >= 0 && number <= 9
         then do
-          let updatedBoard = assign number sqr $ fromJust board
-          case updatedBoard of
-            Just newBoard -> do
-              chooseAlternative $ formatPrettyBoard updatedBoard -- Att fixa: Formatet på båda måste stämma överens
+          case parseBoard currBoard of
+            Just parsedBoard -> do
+              let updatedBoard = assign number sqr parsedBoard
+              case updatedBoard of
+                Just newBoard -> do
+                  putStrLn "\n"
+                  putStrLn $ "Good job! Number: " ++ show number ++ " is now assigned to Square: " ++ sqr
+                  chooseAlternative boards $ (stringArrayToString . formatPrettyMaybeBoard) updatedBoard
+                Nothing -> do
+                  putStrLn "\n"
+                  putStrLn "Nice try! The number can't be assigned, try something else."
+                  chooseAlternative boards currBoard
             Nothing -> do
-              putStrLn "Nice try! The number can't be assigned, try something else."
-              assignNumber updatedBoard
+              putStrLn "Error when parsing board. Please try again."
+              chooseAlternative boards currBoard
         else do
           putStrLn "Please enter a number between 0 and 9."
-          askForNumber board sqr
+          askForNumber boards currBoard sqr
     Nothing -> do
       putStrLn "Please enter a valid number."
-      askForNumber board sqr
-
--- assignar numret som användaren skriver till squaren den valt
--- om numret ej är giltigt och gör sudokut olösligt så frågar vi om användaren verkligen vill tilldela numret
--- annars bara tilldela
--- assignValSquare :: String -> Int -> IO () -- ska en board skickas in också
+      askForNumber boards currBoard sqr
