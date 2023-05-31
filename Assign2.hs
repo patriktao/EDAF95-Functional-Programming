@@ -1,6 +1,15 @@
 -- Patrik Tao
 -- Andreas Ruggieri
 
+{- 
+1. ghci
+2. :load Assign2.hs 
+3. main 
+4. type your name of the file, e.g., easy50.txt 
+5. follow the instructions
+ -}
+
+
 module SolveSudoku where
 
 -- by Adrian Roth
@@ -72,9 +81,10 @@ mapIf f p = map (\x -> if p x then f x else x)
 
 {- Returns just if one of the values are Just -}
 maybeOr :: Maybe a -> Maybe a -> Maybe a
-maybeOr (Just x) _ = Just x
-maybeOr _ (Just y) = Just y
-maybeOr _ _ = Nothing
+maybeOr x y
+  | isJust x = x
+  | isJust y = y
+  | otherwise = Nothing
 
 {- Takes a list of 'Maybe' values and return the first 'Just' value encountered or 'Nothing' if none of the values are 'Just' -}
 firstJust :: [Maybe a] -> Maybe a
@@ -96,7 +106,7 @@ tryReplace :: Eq a => a -> a -> [a] -> Maybe [a]
 tryReplace _ _ [] = Nothing
 tryReplace y y' (x : xs)
   | x == y = Just (y' : xs)
-  | otherwise = fmap (x :) $ tryReplace y y' xs
+  | otherwise = (x :) <$> tryReplace y y' xs
 
 recursiveReplacement :: Eq a => [a] -> [a] -> [a] -> Maybe [a]
 recursiveReplacement [] _ _ = Just []
@@ -171,13 +181,11 @@ sudokuStringSize :: String -> Int
 sudokuStringSize = round . sqrt . fromIntegral . length
 
 printSudoku :: [(String, Int)] -> IO ()
-printSudoku cells = do
-  mapM_ print rows'
+printSudoku cells = mapM_ print rows'
   where
     showSq :: (String, Int) -> String
     showSq sq@(string, val)
       | validSquare (string, val) cells = if val == 0 then "_" else show val
-      | otherwise = "error"
     showRows = map showSq cells
     chunkSize = (round . sqrt . fromIntegral . length) cells
     rows' = chunks chunkSize showRows
@@ -194,7 +202,7 @@ lookups input_list list = justifyList [lookup x list | x <- input_list]
 
 justifyList :: [Maybe a] -> [a]
 justifyList [] = []
-justifyList xs = [x | Just x <- xs]
+justifyList xs = catMaybes xs
 
 {- Assignment 2 Functions -}
 main :: IO ()
@@ -241,8 +249,7 @@ chooseAlternative boards currBoard = do
       chooseAlternative boards currBoard
 
 solveAllSudokus :: [String] -> IO ()
-solveAllSudokus boards = do
-  mapM_ checkSudoku boards
+solveAllSudokus boards = mapM_ checkSudoku boards
   where
     checkSudoku board = do
       putStr "\n"
@@ -302,3 +309,8 @@ askForNumber boards currBoard sqr = do
     Nothing -> do
       putStrLn "Please enter a valid number."
       askForNumber boards currBoard sqr
+
+
+
+-- Case -> pattern matching, matchar resultat till förväntat resultat
+-- Guards -> Boolean, evaluerar argumenten

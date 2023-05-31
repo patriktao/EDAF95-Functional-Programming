@@ -1,0 +1,101 @@
+
+
+
+-- 1 Point-Free Notation
+
+{- flip can be used to transform a function into one that takes its arguments in reverse order, then use point-free to define the function in terms of composition and omit explicit arguments.-}
+
+f x y = (3 - y) / x 
+f = flip $ (/) . (3-)
+
+g x y = [x z | z <- [1, 3..y]]
+g x y = flip $ (flip map) . (filter odd) . (flip take (iterate (+1) 1)))
+
+{-
+1. We have to create a list that goes from 1...y and all elements must be uneven.
+2. We want to apply function x on each element in this list. 
+3. Try to make it point-free
+4. Now remove the arguments and try to make sure that correct parameters are used before others.
+-}
+
+-- 2 Type Derivation
+g xs = [f x | x <- xs, x > 3]
+
+f n = replicate n '+'
+
+g :: [Int] -> [[String]] 
+
+{-
+replicate :: Int -> a -> [a]
+replicate n x = take n (repeat x)
+-}
+
+-- 3 Type Declaration
+{-
+Type: Creates type synonym or alias which is applied to make the code more readible and more expressive. Can also be called as an alternative name to a certain type. Does not introduces new types.
+E.g. Type Board = [(Int, [String])]
+
+Data: Creates a completely new type, defines algebraic type which can combine existing types, allow multiple constructors and field types, more complex.
+Data Shape = Circle double | Rectangle Double Double
+
+Newtype: Defines a new type with 1 constructor wrapped around an existing type, ex.
+	E.g. newtype Meter = Meter Double
+		distance :: Meter
+		distance = Meter 10.5
+	You can have same runtime representation as the wrapped type.
+-}
+
+-- 4 Programming
+{-
+The uncurry function takes a curried function and converts it into a function that takes a tuple as its argument. It "uncurries" the function map by transforming the tuple into the individual arguments used in the curried function, i.e. map.
+
+uncurry :: (a -> b -> c) -> (a, b) -> c
+
+-}
+f :: (a -> b, [a]) -> [b]
+f = uncurry map 
+
+
+-- 5 List Comprehension
+f n = [(a,b,c) | a <- [1..n], b <- [1..n], c <- [1..n], a^2 + b^2 == c^2, a<=b, b<=c, c<= n]
+
+-- 6 Programming
+--a
+data Proposition = Var String | And Proposition Proposition | Or Proposition Proposition | Not Proposition
+
+--b
+-- nub is used to ensure there are no duplicates
+
+vars :: Proposition -> [String]
+vars (Var p) = [p]
+vars (And p1 p2) = nub $ (++) (vars p1) (vars p2)
+vars (Or p1 p2) = nub $ (++) (vars p1) (vars p2)
+vars (Not p) = vars p
+
+--c
+[("p", True), ("q", False)]
+-- lookup is used to find a value in a map by looking at the key.
+-- fromJust is used to extract the just value from a Maybe
+
+findValue :: String -> [(String, Bool)] -> Bool
+findValue s xs = fromJust $ lookup xs s 
+
+truthValue :: Proposition -> [(String, Bool)] -> Bool
+vars (Var x) vals = findValue x vals 
+vars (Not x) vals = not $ findValue x vals
+vars (Or p1 p2) vals = (||) (truthValue p1 vals) (truthValue p2 vals)
+vars (And p1 p2) vals = (&&) (truthValue p1 vals) (truthValue p2 vals)
+
+--d
+
+
+boolperms vs :: [String] -> [[(String,Bool)]]
+boolperms [] = []
+boolperms (x:[]) = [[(x,True)],[(x,False)]]
+boolperms (x:xs) = (++) (map ((x,True):) $ boolperms xs) (map ((x,False):) $ boolperms xs)
+
+valslist :: Proposition -> [[(String,Bool)]]
+valslist = boolperms . vars 
+
+tautology :: Proposition -> Bool
+tautology p = and $ map (truthValue p) (valslist p)
